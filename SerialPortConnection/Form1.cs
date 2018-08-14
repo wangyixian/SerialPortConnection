@@ -9,6 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using INIFILE;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace SerialPortConnection
 {
@@ -148,19 +149,19 @@ namespace SerialPortConnection
             sp1.BaudRate = 9600;
 
             Control.CheckForIllegalCrossThreadCalls = false;    //这个类中我们不检查跨线程的调用是否合法(因为.net 2.0以后加强了安全机制,，不允许在winform中直接跨线程访问控件的属性)
-            sp1.DataReceived += new SerialDataReceivedEventHandler(sp1_DataReceived);
+            sp1.DataReceived += sp1_DataReceived;
             //sp1.ReceivedBytesThreshold = 1;
 
             radio1.Checked = true;  //单选按钮默认是选中的
             rbRcvStr.Checked = true;
 
-            //准备就绪              
-            sp1.DtrEnable = true;
-            sp1.RtsEnable = true;
-            //设置数据读取超时为1秒
-            sp1.ReadTimeout = 1000;
+            ////准备就绪              
+            //sp1.DtrEnable = true;
+            //sp1.RtsEnable = true;
+            ////设置数据读取超时为1秒
+            //sp1.ReadTimeout = 1000;
 
-            sp1.Close();
+            //sp1.Close();
         }
 
         void sp1_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -183,26 +184,42 @@ namespace SerialPortConnection
                 {
                     try
                     {
-                        Byte[] receivedData = new Byte[sp1.BytesToRead];        //创建接收字节数组
-                        sp1.Read(receivedData, 0, receivedData.Length);         //读取数据
-                        //string text = sp1.Read();   //Encoding.ASCII.GetString(receivedData);
-                        sp1.DiscardInBuffer();                                  //清空SerialPort控件的Buffer
-                        //这是用以显示字符串
-                        //    string strRcv = null;
-                        //    for (int i = 0; i < receivedData.Length; i++ )
-                        //    {
-                        //        strRcv += ((char)Convert.ToInt32(receivedData[i])) ;
-                        //    }
-                        //    txtReceive.Text += strRcv + "\r\n";             //显示信息
-                        //}
-                        string strRcv = null;
-                        //int decNum = 0;//存储十进制
-                        for (int i = 0; i < receivedData.Length; i++) //窗体显示
-                        {
-                          
-                            strRcv += receivedData[i].ToString("X2");  //16进制显示
+                        if (this.rbRcvStr.Checked) {
+                            // 接收的是字符串格式
+                            Thread.Sleep(1000);
+                            int length = sp1.BytesToRead;
+                            if (length > 0) {
+                                byte[] buf = new byte[length];
+                                sp1.Read(buf, 0, length);
+                                sp1.DiscardInBuffer();
+                                string strRcv = Encoding.Default.GetString(buf);
+
+                                txtReceive.Text += strRcv + "\r\n";
+                            }
                         }
-                        txtReceive.Text += strRcv + "\r\n";
+                        else
+                        {
+                            Byte[] receivedData = new Byte[sp1.BytesToRead];        //创建接收字节数组
+                            sp1.Read(receivedData, 0, receivedData.Length);         //读取数据
+                                                                                    //string text = sp1.Read();   //Encoding.ASCII.GetString(receivedData);
+                            sp1.DiscardInBuffer();                                  //清空SerialPort控件的Buffer
+                                                                                    //这是用以显示字符串
+                                                                                    //    string strRcv = null;
+                                                                                    //    for (int i = 0; i < receivedData.Length; i++ )
+                                                                                    //    {
+                                                                                    //        strRcv += ((char)Convert.ToInt32(receivedData[i])) ;
+                                                                                    //    }
+                                                                                    //    txtReceive.Text += strRcv + "\r\n";             //显示信息
+                                                                                    //}
+                            string strRcv = null;
+                            //int decNum = 0;//存储十进制
+                            for (int i = 0; i < receivedData.Length; i++) //窗体显示
+                            {
+
+                                strRcv += receivedData[i].ToString("X2");  //16进制显示
+                            }
+                            txtReceive.Text += strRcv + "\r\n";
+                        }
                     }
                     catch (System.Exception ex)
                     {
